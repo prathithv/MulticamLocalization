@@ -36,6 +36,7 @@ all_address = []
 #data queue to handle data from all the clients and process in the main thread
 in_data = Queue()
 in_data_classes = Queue()
+in_data_face = Queue()
 
 # socket variables
 a=10 
@@ -111,24 +112,49 @@ ct = CentroidTracker()
     # width and height of GUI Window
 
 def initialize_UI():
-    WINDOW_WIDTH = 700
-    WINDOW_HEIGHT = 500
+    WINDOW_WIDTH = 800
+    WINDOW_HEIGHT = 600
     global win 
     win = GraphWin("My Window", WINDOW_WIDTH, WINDOW_HEIGHT)
     win.setBackground('black')
-    img = Image(Point(350, 250), "bengaluru_airport.gif")
+    img = Image(Point(400, 300), "bengaluru_airport.gif")
     img.draw(win)
-    Title = Text(Point(160, 70), "Multicam Localization")
+    titleRec = Rectangle(Point(0,0), Point(800,50))
+    titleRec.setFill("yellow")
+    titleRec.draw(win)
+    Title = Text(Point(400, 25), "Multicam Localization")
     Title.setSize(24)
     Title.draw(win)
+    liveCountRec = Rectangle(Point(0,50), Point(400,90))
+    liveCountRec.setFill("purple")
+    liveCountRec.draw(win)
     global LiveCount
-    LiveCount = Text(Point(100, 120), f"Live Count : {len(objectCount)}")
-    LiveCount.setSize(16)
+    LiveCount = Text(Point(200, 70), f"Live Count : {len(objectCount)}")
+    LiveCount.setSize(18)
+    LiveCount.setStyle("bold")
     LiveCount.draw(win)
+    cameraCountRec = Rectangle(Point(400,50), Point(800,90))
+    cameraCountRec.setFill("purple")
+    cameraCountRec.draw(win)
     global cameraCount
-    cameraCount = Text(Point(500,80), f"No. of cameras online : {len(all_connections)}")
+    cameraCount = Text(Point(600,70), f"No. of cameras online : {len(all_connections)}")
+    cameraCount.setSize(18)
+    cameraCount.setStyle("bold")
     cameraCount.draw(win)
-
+    crookAlertRec = Rectangle(Point(0, 90), Point(400,120))
+    crookAlertRec.setFill("orange")
+    crookAlertRec.draw(win)
+    bagAlertRec = Rectangle(Point(400, 90), Point(800,120))
+    bagAlertRec.setFill("orange")
+    bagAlertRec.draw(win)
+    global crookAlert
+    global bagAlert
+    crookAlert = Text(Point(200, 105), "Crook  :  No Alert")
+    crookAlert.setTextColor("black")
+    crookAlert.draw(win)
+    bagAlert = Text(Point(600, 105), "Bag  :  No Alert")
+    bagAlert.draw(win)
+    
 # distance integration
 # pre processing the received data
 
@@ -174,6 +200,8 @@ def data_pre_process(client_num, classes, rects):
         dis = 0
         dis = dis + camera_field_of_view[client_num_int][1]
     # dis.append(dis)
+    rects[1] = dis
+    rects[2] = dis
     return dis
 
 
@@ -363,7 +391,7 @@ def work_main_gate(conn):
             # else:
             #     # print("\nlocation")
             #     # print(m)
-            in_data.put(m)
+            in_data_face.put(m)
             count_recv=0
             break_var = True
             #print(complete_info[a:])
@@ -374,26 +402,56 @@ def work_main_gate(conn):
             #count=count+1
         if break_var == True:
             break
+        
+        
+
 # loop over the frames from the video stream
 def main_work():
     # prev_objects = OrderedDict() 
-    global prev_objects       
+    global prev_objects    
+    alertCounter = 0
+    crookDetected = 0
     # creating rects for storing current detected locations
+    # print(len(prev_objects))
     rects = []
     if in_data.empty() == False:
         # if condition for checking the no. of elements in the queue is equal to no. of cameras
+        # while in_data.qsize() != len(all_connections):
+        #     pass
+        # print(f"in_data.qsize  =  {in_data.qsize()}  and len of all connections = {len(all_connections)}")
+        if in_data.qsize() >= len(all_connections):
+            while in_data.empty() == False:    
+                current_data = in_data.get()
+                # print(f"current data  :  {current_data}")
+                # dist has some problem
+                # print(f"current location before processing :  {current_data[2:]}")
+                temp_location = current_data[2:]
+                dist = data_pre_process(current_data[0],current_data[1],temp_location)
+                # print(f"current  :  {dist}")
+                print(f"current location after processing :  {temp_location}")
+                rects.append(temp_location)
+        
+        objects = ct.update(rects)
         
         
-        current_data = in_data.get()
-        # print(f"current data  :  {current_data}")
-        # dist has some problem
-        print(f"current location before processing :  {current_data[2:]}")
-        temp_location = current_data[2:]
-        dist = data_pre_process(current_data[0],current_data[1],temp_location)
-        # print(f"current  :  {dist}")
-        print(f"current location after processing :  {temp_location}")
-        rects.append(temp_location)
-        objects = ct.update(rects, dist)
+        if crookDetected == 1:
+            alertCounter = alertCounter + 1
+        # check crooks
+        if alertCounter >= 50:
+            crookAlert = setText("No Alert")
+            crookAlert.setTextColor("black")
+            alertCounter = 0
+            crookDetected = 0
+        # print(f"Face data : {in_data_face}")
+        while in_data_face.empty() == False:
+            current_data_face = in_data_face.get()
+            print(f"face : {current_data_face}")
+            if current_data_face[1] != "None":
+                crookAlert = setText(f"Crook : {current_face_data}")
+                crookAlert.setTextColor("red")
+                crookDetected = 1
+                # put the detected face on UI
+                
         # print(f"\nObjects = {objects}")
         # get_data_from_server(rects)
         
@@ -407,8 +465,8 @@ def main_work():
         # objects = ct.update(rects, dist)
     
         # print(f"objects = {objects}")
-        print(f"len(objects)  :  {len(objects)}")
-        print(f"len(prev_objects)  :  {len(prev_objects)}")
+        # print(f"len(objects)  :  {len(objects)}")
+        # print(f"len(prev_objects)  :  {len(prev_objects)}")
         if len(objects) != len(prev_objects):
             for key in objects.keys():
                 if not key in prev_objects:
@@ -464,7 +522,7 @@ bind_socket()
 accepting_connections()
 accepting_connections()
 # for main gate camera
-# accepting_connections_main_gate()
+accepting_connections_main_gate()
 
 # change stop_variable in main thread by cheking an input from keyboard
 while stop_variable == 0:

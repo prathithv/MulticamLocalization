@@ -5,7 +5,7 @@ from collections import OrderedDict
 import numpy as np
 
 class CentroidTracker():
-	def __init__(self, maxDisappeared=50):
+	def __init__(self, maxDisappeared=1000):
 		# initialize the next unique object ID along with two ordered
 		# dictionaries used to keep track of mapping a given object
 		# ID to its centroid and number of consecutive frames it has
@@ -47,7 +47,7 @@ class CentroidTracker():
 		del self.objects[objectID]
 		del self.disappeared[objectID]
 
-	def update(self, rects, distance):
+	def update(self, rects):
 		# check to see if the list of input bounding box rectangles
 		# is empty
 		if len(rects) == 0:
@@ -73,8 +73,8 @@ class CentroidTracker():
 		for (i, (startX, startY, endX, endY)) in enumerate(rects):
 			# use the bounding box coordinates to derive the centroid
 			cX = int((startX + endX) / 2.0)
-			cY = distance
-			#cY = int((startY + endY) / 2.0)
+			# cY = distance
+			cY = int((startY + endY) / 2.0)
 			inputCentroids[i] = (cX, cY)
 
 		# if we are currently not tracking any objects take the input

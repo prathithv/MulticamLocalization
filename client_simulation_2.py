@@ -43,7 +43,7 @@ while True:
     mymsg_boxes = None
     # mymsg_classes = No    
     # processing delay
-    time.sleep(2)    
+    time.sleep(4)    
     # update the current_location
     temp_number = random.randint(0,5)
     current_location[2] = current_location[2] + incremental_list[temp_number]
