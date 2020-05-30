@@ -24,7 +24,7 @@ s.connect((server_ip, server_port))
 # print(random())
 # start at some value and keep incrementing till end of frame
 client_number = 1
-classes_detected = 2
+classes_detected = 3
 current_location = [client_number, classes_detected, 0.36, 0, 0.84, 0]
 
 
@@ -43,7 +43,7 @@ while True:
     mymsg_boxes = None
     # mymsg_classes = No    
     # processing delay
-    time.sleep(4)    
+    time.sleep(2)    
     # update the current_location
     temp_number = random.randint(0,5)
     current_location[2] = current_location[2] + incremental_list[temp_number]

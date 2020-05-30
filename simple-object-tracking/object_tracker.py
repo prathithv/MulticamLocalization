@@ -22,6 +22,9 @@ import socket
 import pickle
 from queue import Queue
 import threading
+from scipy.spatial import distance as dist
+import math
+# import file
 
 # stop variable to stop the whole program
 stop_variable = 0
@@ -84,8 +87,10 @@ count_recv=0
 # by the way.... all the dictionaries are ordered from python 3.6
 # simply using OrderDict() for no reason
 objectCount = OrderedDict()
+textCount = OrderedDict()
 classes = OrderedDict()
 prev_objects = OrderedDict()
+bagPersonRelation = OrderedDict()
 live_count = 0
 
 # defining macros or constants for multi-camera system
@@ -154,6 +159,28 @@ def initialize_UI():
     crookAlert.draw(win)
     bagAlert = Text(Point(600, 105), "Bag  :  No Alert")
     bagAlert.draw(win)
+    # Legend Creation
+    legendRec = Rectangle(Point(0,510), Point(800,610))
+    legendRec.setFill("grey")
+    legendRec.draw(win)
+    legendTitle = Text(Point(400, 520), "LEGEND")
+    legendTitle.draw(win)
+    bagDot = Circle(Point(30, 560), 5)
+    bagDot.setFill(color_rgb(0, 255, 0))
+    bagDot.draw(win)
+    bagText = Text(Point(60, 560), "- Bag")
+    bagText.draw(win)
+    personWithBagDot = Circle(Point(300, 560), 5)
+    personWithBagDot.setFill(color_rgb(0, 0, 255))
+    personWithBagDot.draw(win)
+    personWithBagText = Text(Point(375, 560), "- Person With Bag")
+    personWithBagText.draw(win)
+    personWithoutBagDot = Circle(Point(600, 560), 5)
+    personWithoutBagDot.setFill(color_rgb(255, 0, 0))
+    personWithoutBagDot.draw(win)
+    personWithoutBagText = Text(Point(685, 560), "- Person Without Bag")
+    personWithoutBagText.draw(win)
+    
     
 # distance integration
 # pre processing the received data
@@ -207,13 +234,20 @@ def data_pre_process(client_num, classes, rects):
 
 # create tracks if new tracks are added
 def create_track(key, centroid, classes_data):
-    print("creating tracks")
+    # print("creating tracks")
     #live_track = live_track + 1 # incrementing live count
+    print(f"class : {classes_data}")
     pt = Point(centroid[0], centroid[1])
     cir = Circle(pt, 5)
-    if classes_data == 0:
+    pt1 = Point(centroid[0], centroid[1]+15)
+    objectText = Text(pt1, str(key))
+    objectText.setSize(16)
+    objectText.setStyle("bold")
+    objectText.draw(win)
+    textCount[key] = objectText
+    if classes_data == 1:
         cir.setFill(color_rgb(0, 255, 0))
-    elif classes_data == 1:
+    elif classes_data == 2:
         cir.setFill(color_rgb(0, 0, 255))
     else:
         cir.setFill(color_rgb(255, 0, 0))
@@ -222,6 +256,8 @@ def create_track(key, centroid, classes_data):
 
 def delete_track(key):
     objectCount[key].undraw()
+    textCount[key].undraw()
+    del textCount[key]
     del objectCount[key]
 
 # this function is only for updating UI dot not for actual track update
@@ -238,6 +274,7 @@ def update_tracks(objects):
             dx = 0
             dy = 0
         if len(objectCount):
+            textCount[key].move(dx, dy)
             objectCount[key].move(dx, dy)
 
 def get_data_from_server(rects):
@@ -361,59 +398,98 @@ def accepting_connections_main_gate():
         print("Error accepting connections")
 
 
-def work_main_gate(conn):
-    complete_info = b''
-    rec_msg = True
-    break_var = False
+def work_main_gate(clt):
+    global in_data_face
     while True:
-        mymsg = clt.recv(16)
-        if rec_msg:
-            #print(f"The length of message = {mymsg[:a]}")
-            x=int(mymsg[:a])
-            #x = pickle.loads(mymsg)
-            rec_msg = False
-        complete_info += mymsg
-        #print(f"\ncomplete_info : {len(complete_info)}")
-        #print(f"\nx : {x}")
-        #print(f"\na : {a}")
-        if len(complete_info) - a == x:
-            m = pickle.loads(complete_info[a:])
-            # if count_recv==0:
-            #     in_data_classes.put(m)
-            #     # print("\nobject:")
-            #     # if m==1:
-            #     #     print("bag detected")
-            #     # elif m==2:
-            #     #     print("Person With Bag")
-            #     # else:
-            #     #     print("Person Without Bag")
-            #     count_recv=count_recv+1
-            # else:
-            #     # print("\nlocation")
-            #     # print(m)
-            in_data_face.put(m)
-            count_recv=0
-            break_var = True
-            #print(complete_info[a:])
-            #m = pickle.loads(complete_info[a:])
-            #print(m)
-            rec_msg = True
-            complete_info = b''
-            #count=count+1
-        if break_var == True:
-            break
-        
-        
+        complete_info = b''
+        rec_msg = True
+        break_var = False
+        while True:
+            mymsg = clt.recv(16)
+            if rec_msg:
+                #print(f"The length of message = {mymsg[:a]}")
+                x=int(mymsg[:a])
+                #x = pickle.loads(mymsg)
+                rec_msg = False
+            complete_info += mymsg
+            #print(f"\ncomplete_info : {len(complete_info)}")
+            #print(f"\nx : {x}")
+            #print(f"\na : {a}")
+            if len(complete_info) - a == x:
+                m = pickle.loads(complete_info[a:])
+                # print(f"received data : {m}")
+                # if count_recv==0:
+                #     in_data_classes.put(m)
+                #     # print("\nobject:")
+                #     # if m==1:
+                #     #     print("bag detected")
+                #     # elif m==2:
+                #     #     print("Person With Bag")
+                #     # else:
+                #     #     print("Person Without Bag")
+                #     count_recv=count_recv+1
+                # else:
+                #     # print("\nlocation")
+                #     # print(m)
+                in_data_face.put(m)
+                count_recv=0
+                break_var = True
+                #print(complete_info[a:])
+                #m = pickle.loads(complete_info[a:])
+                #print(m)
+                rec_msg = True
+                complete_info = b''
+                #count=count+1
+            if break_var == True:
+                break
+
+def computeBagAlert(bagKey, clssStack):
+    # bagKey is the objectID of bag detected
+    distArray = dict()
+    distIndex = []
+    bagCentroid = objects[bagKey]
+    for key in clssStack.keys():
+        if clssStack[key] == 3 and key != bagKey:
+            # otherCentroid.append(objects[key])
+            currentLoc = objects[key]
+            dist = math.sqrt(((currentLoc[0] - bagCentroid[0])**2) + ((currentLoc[1] - bagCentroid[1])**2))
+            # print(f"distance = {dist}")
+            distArray[key] = dist
+    
+    sortedArray = sorted(distArray.items(), key=lambda x:x[1], reverse = False)
+    # print(f"sorted array = {sortedArray}")
+    # if sortedArray[0][1] > 20:
+    #     # bagAloneAlert
+    bagPersonRelation[bagKey] = sortedArray[0][0]
+    print(f"bag person relation : {bagPersonRelation}")
+    
+    # update the UI
+    bagAlert.setText("bag + " + str(bagKey) + "mapped to " + str(bagPersonRelation[bagKey]))
+    bagAlert.setStyle("bold")
+    bagAlert.setFill("red")
+    
+    # relativeDistance = dist.cdist(np.array(bagCentroid), otherCentroid)
+    
+    # print(f"relative distance : {relativeDistance}")
+    # pass
 
 # loop over the frames from the video stream
+crookDetected = 0
+alertCounter = 0
+
 def main_work():
     # prev_objects = OrderedDict() 
-    global prev_objects    
-    alertCounter = 0
-    crookDetected = 0
+    global prev_objects
+    global in_data_face
+    global objects
+    global crookDetected
+    global alertCounter
+    # alertCounter = 0
+    # crookDetected = 0
     # creating rects for storing current detected locations
     # print(len(prev_objects))
     rects = []
+    temp_classes = []
     if in_data.empty() == False:
         # if condition for checking the no. of elements in the queue is equal to no. of cameras
         # while in_data.qsize() != len(all_connections):
@@ -428,27 +504,38 @@ def main_work():
                 temp_location = current_data[2:]
                 dist = data_pre_process(current_data[0],current_data[1],temp_location)
                 # print(f"current  :  {dist}")
-                print(f"current location after processing :  {temp_location}")
+                # print(f"current location after processing :  {temp_location}")
+                temp_classes.append(current_data[1])
                 rects.append(temp_location)
         
-        objects = ct.update(rects)
-        
-        
+        objects = ct.update(rects, temp_classes)
+        clssStack = ct.classes
+        print(f"class stack : {clssStack}")
+        # to compute distance between bag and nearest person
+        for key in clssStack.keys():
+            if clssStack[key] == 1:
+                computeBagAlert(key, clssStack)
+                
+        # print(f"class stack : {clssStack}")
+        # print(f"crook detected : {crookDetected}")
         if crookDetected == 1:
             alertCounter = alertCounter + 1
         # check crooks
-        if alertCounter >= 50:
-            crookAlert = setText("No Alert")
+        # print(f"alert counter : {alertCounter}")
+        if alertCounter >= 500:
+            crookAlert.setText("No Alert")
             crookAlert.setTextColor("black")
+            crookAlert.setStyle("normal")
             alertCounter = 0
             crookDetected = 0
-        # print(f"Face data : {in_data_face}")
+        # print(f"Face data : {in_data_face.qsize()}")
         while in_data_face.empty() == False:
             current_data_face = in_data_face.get()
-            print(f"face : {current_data_face}")
+            # print(f"face : {current_data_face[1]}")
             if current_data_face[1] != "None":
-                crookAlert = setText(f"Crook : {current_face_data}")
+                crookAlert.setText(f"Crook : {current_data_face[1]}")
                 crookAlert.setTextColor("red")
+                crookAlert.setStyle("bold")
                 crookDetected = 1
                 # put the detected face on UI
                 
@@ -471,7 +558,8 @@ def main_work():
             for key in objects.keys():
                 if not key in prev_objects:
                     # create new tracks
-                    create_track(key,objects[key],current_data[1])
+                    # print(f"class : {clssStack[key]}")
+                    create_track(key,objects[key],clssStack[key])
     
             for key in prev_objects.keys():
                 if not key in objects:

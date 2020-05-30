@@ -31,16 +31,16 @@ current_data = [client_number, data_none]
 crook = 0
 
 while True:
-    if crook >= 10:
+    if crook >= 20:
         current_data = [client_number, data_face]
         print(current_data)
         mymsg = pickle.dumps(current_data)
         mymsg = bytes(f'{len(mymsg):<{a}}', "utf-8")+mymsg
         s.send(mymsg)
         mymsg = None
-        time.sleep(3)
+        time.sleep(1)
         crook = crook + 1
-        if crook >= 20:
+        if crook >= 30:
             crook = 0
     else:
         current_data = [client_number, data_none]
@@ -49,5 +49,5 @@ while True:
         mymsg = bytes(f'{len(mymsg):<{a}}', "utf-8")+mymsg
         s.send(mymsg)
         mymsg = None
-        time.sleep(3)
+        time.sleep(1)
         crook = crook + 1

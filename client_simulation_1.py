@@ -24,7 +24,7 @@ s.connect((server_ip, server_port))
 # print(random())
 # start at some value and keep incrementing till end of frame
 client_number = 0
-classes_detected = 3
+classes_detected = 1
 current_location = [client_number, classes_detected, 0.49, 0, 0.92, 0]
 
 
