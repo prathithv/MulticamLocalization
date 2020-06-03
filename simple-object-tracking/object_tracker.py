@@ -100,9 +100,9 @@ live_count = 0
 # ** IMPORTANT ** : Get these values from calibration.py
 camera_field_of_view = [
     # camera 0
-    [40,320,217,420],
+    [65,341,296,480],
     # camera 1
-    [200,300,400,500],
+    [214,194,473,386],
     # camera 2
     [200,300,400,500],
 ]
@@ -180,7 +180,17 @@ def initialize_UI():
     personWithoutBagDot.draw(win)
     personWithoutBagText = Text(Point(685, 560), "- Person Without Bag")
     personWithoutBagText.draw(win)
-    
+    global bagAloneAlert
+    bagAloneAlert = Text(Point(600, 135), "NULL")
+    bagAloneAlert.setFill("black")
+    bagAloneAlert.setStyle("normal")
+    bagAloneAlert.draw(win)
+    cameraOne = Image(Point(177, 490), "camera_small.gif")
+    cameraOne.draw(win)
+    cameraTwo = Image(Point(263, 190), "camera_small.gif")
+    cameraTwo.draw(win)
+    cameraThree = Image(Point(583, 173), "camera_small.gif")
+    cameraThree.draw(win)
     
 # distance integration
 # pre processing the received data
@@ -261,11 +271,18 @@ def delete_track(key):
     del objectCount[key]
 
 # this function is only for updating UI dot not for actual track update
+lineCount = 0
+lineObject = []
 def update_tracks(objects):
+    global lineCount
+    global lineObject
     for key in objects.keys():
         if key in prev_objects.keys():
             x = prev_objects.get(key)
             y = objects.get(key)
+            lineObject.append(Line(Point(x[0],x[1]), Point(y[0],y[1])))
+            lineObject[lineCount].draw(win)
+            lineCount = lineCount + 1
             # print(f"x  :{x}  y  :{y}  \n\n")
             dx = x[0] - y[0]
             dy = x[1] - y[1]
@@ -458,13 +475,16 @@ def computeBagAlert(bagKey, clssStack):
     
     sortedArray = sorted(distArray.items(), key=lambda x:x[1], reverse = False)
     # print(f"sorted array = {sortedArray}")
-    # if sortedArray[0][1] > 20:
-    #     # bagAloneAlert
+    if sortedArray[0][1] > 20:
+        # bagAloneAlert
+        bagAloneAlert.setText(f"bag {bagKey} is alone")
+        bagAloneAlert.setStyle("bold")
+        bagAloneAlert.setFill("red")
     bagPersonRelation[bagKey] = sortedArray[0][0]
-    print(f"bag person relation : {bagPersonRelation}")
+    # print(f"bag person relation : {bagPersonRelation}")
     
     # update the UI
-    bagAlert.setText("bag + " + str(bagKey) + "mapped to " + str(bagPersonRelation[bagKey]))
+    bagAlert.setText("bag " + str(bagKey) + "  mapped to person" + str(bagPersonRelation[bagKey]))
     bagAlert.setStyle("bold")
     bagAlert.setFill("red")
     
